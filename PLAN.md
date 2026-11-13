@@ -27,7 +27,9 @@ ads, notifications, i18n (UI is English).
 - `share_plus` + `path_provider` for the CSV export.
 - Chart drawn by hand with a `CustomPainter`: no chart library; one small chart is
   ~150 lines we fully control.
-- Tests: `flutter_test` + `sqflite_common_ffi` (DB tests on the desktop).
+- Tests: plain `package:test` + `sqflite_common_ffi`, so the logic and DB tests run
+  with `dart test` on the desktop (no Flutter engine). Run them in a DST timezone too:
+  `TZ=Europe/Paris dart test`.
 - Release build signed with the debug key of the machine that builds it (no
   keystore). NOTE: keep updating from the same machine; a build from another machine
   will not install over it, and uninstalling deletes the data (export CSV first).
@@ -167,7 +169,8 @@ lib/theme.dart                palette tokens + ThemeData
 lib/models.dart               Exercise, WorkSet, Session, ExerciseSummary
 lib/stats.dart                topSet, chart points, month change (pure, tested)
 lib/db.dart                   Repo: the only SQL owner
-lib/format.dart               kg formatting (80, 82.5), relative dates
+lib/format.dart               kg formatting (80, 82.5), dates, field parsing
+lib/calendar_math.dart        Monday-first month grid, week/month counts
 lib/csv_export.dart           rows -> CSV text (pure, tested) + share
 lib/widgets/progress_chart.dart
 lib/screens/home.dart
@@ -178,13 +181,15 @@ lib/screens/calendar.dart     month grid of trained days
 test/stats_test.dart
 test/db_test.dart
 test/csv_export_test.dart
+test/format_test.dart
+test/calendar_math_test.dart
 ```
 
 ## Steps
 
 1. Scaffold (done).
-2. stats.dart + tests.
-3. db.dart + tests (save day replaces, cascade delete, unique names).
+2. stats.dart + tests (done).
+3. db.dart + tests (done).
 4. Theme + home screen.
 5. Log workout screen.
 6. Exercise screen + chart.
@@ -192,6 +197,8 @@ test/csv_export_test.dart
 7b. Calendar tab (month grid logic tested: leap years, Monday start, month lengths).
 8. CSV export + test.
 9. Analyze / tests clean -> run it on a phone and adjust the look.
+10. Screenshots of the real app (adb `exec-out screencap -p`) into `docs/screenshots/`
+    and into the README.
 
 ## Decisions (2026-11-13)
 
@@ -207,4 +214,5 @@ test/csv_export_test.dart
 
 - Android scaffold (package, label, black splash, default icon, release signed with
   the debug key), `pubspec.yaml`, `analysis_options.yaml`.
-- `lib/models.dart` and `lib/stats.dart` drafts. No UI, no DB yet.
+- Data layer done: `db.dart` (SQLite repo), `stats.dart`, `format.dart`,
+  `calendar_math.dart`, `csv_export.dart`; 37 tests green. No UI yet.

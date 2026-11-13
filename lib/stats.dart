@@ -33,15 +33,14 @@ List<ChartPoint> chartPoints(List<Session> sessions, {DateTime? since}) {
 }
 
 /// Top kg of the latest session minus the top kg of the latest session that is
-/// at least [window] older. Null when no session is that old.
-double? changeOver(
-  List<Session> sessions, {
-  Duration window = const Duration(days: 30),
-}) {
+/// at least [days] calendar days older. Null when no session is that old.
+double? changeOver(List<Session> sessions, {int days = 30}) {
   final points = chartPoints(sessions);
   if (points.length < 2) return null;
   final last = points.last;
-  final cutoff = last.day.subtract(window);
+  // Calendar arithmetic, not a Duration: across a DST change 30 * 24 h lands an
+  // hour off midnight and would wrongly include or exclude the boundary day.
+  final cutoff = DateTime(last.day.year, last.day.month, last.day.day - days);
   ChartPoint? before;
   for (final p in points) {
     if (p.day.isAfter(cutoff)) break;
