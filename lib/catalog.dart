@@ -287,6 +287,26 @@ const catalog = <CatalogEntry>[
     ),
   ),
   CatalogEntry(
+    id: 'incline_dumbbell_press',
+    nameEn: 'Incline dumbbell press',
+    nameEs: 'Press inclinado con mancuernas',
+    group: MuscleGroup.chest,
+    pose: Pose(
+      head: (16, 26),
+      gear: [
+        [(12, 30), (38, 51)],
+        [(38, 51), (52, 51)],
+        [(42, 51), (42, 60)],
+      ],
+      dumbbells: [(25, 13)],
+      body: [
+        [(21, 32), (40, 46)],
+        [(40, 46), (52, 42), (56, 58)],
+        [(23, 33), (25, 16)],
+      ],
+    ),
+  ),
+  CatalogEntry(
     id: 'dumbbell_bench_press',
     nameEn: 'Dumbbell bench press',
     nameEs: 'Press con mancuernas',
@@ -521,6 +541,29 @@ const catalog = <CatalogEntry>[
       body: [
         [(11, 24), (26, 26), (38, 26), (53, 24)],
         [(32, 26), (32, 44)],
+        ..._standingLegsFront,
+      ],
+    ),
+  ),
+  CatalogEntry(
+    id: 'dumbbell_shrug',
+    nameEn: 'Dumbbell shrug',
+    nameEs: 'Encogimientos de trapecio',
+    group: MuscleGroup.shoulders,
+    pose: Pose(
+      head: (32, 13),
+      gear: [
+        // Arrows over the shoulders: the shoulders go up.
+        [(20, 15), (20, 6)],
+        [(17, 9), (20, 6), (23, 9)],
+        [(44, 15), (44, 6)],
+        [(41, 9), (44, 6), (47, 9)],
+        _floor,
+      ],
+      dumbbells: [(19, 43), (45, 43)],
+      body: [
+        [(19, 41), (21, 23), (26, 19), (38, 19), (43, 23), (45, 41)],
+        [(32, 19), (32, 44)],
         ..._standingLegsFront,
       ],
     ),

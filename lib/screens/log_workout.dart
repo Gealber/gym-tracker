@@ -168,7 +168,15 @@ class _LogWorkoutScreenState extends State<LogWorkoutScreen> {
     }
     await store.repo.saveDay(widget.exercise.id, _day, sets);
     store.changed();
-    if (mounted) Navigator.of(context).pop();
+    if (mounted) _close();
+  }
+
+  /// Hides the keyboard before leaving. Popping the screen while the keyboard
+  /// is up can leave the previous screen laid out as if the keyboard still
+  /// covered it (seen on the phone: the exercise screen cut in half).
+  void _close() {
+    FocusManager.instance.primaryFocus?.unfocus();
+    Navigator.of(context).pop();
   }
 
   Future<void> _deleteDay() async {
@@ -184,7 +192,7 @@ class _LogWorkoutScreenState extends State<LogWorkoutScreen> {
     if (!ok) return;
     await store.repo.saveDay(widget.exercise.id, _day, const []);
     store.changed();
-    if (mounted) Navigator.of(context).pop();
+    if (mounted) _close();
   }
 
   @override
@@ -195,7 +203,7 @@ class _LogWorkoutScreenState extends State<LogWorkoutScreen> {
         leading: IconButton(
           tooltip: 'Close',
           icon: const Icon(Icons.close),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: _close,
         ),
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

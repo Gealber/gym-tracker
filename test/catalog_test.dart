@@ -49,6 +49,12 @@ void main() {
       expect(ids(searchCatalog('jalon')), ['lat_pulldown']);
     });
 
+    test('trapecio finds the shrug, inclinado both incline presses', () {
+      expect(ids(searchCatalog('trapecio')), ['dumbbell_shrug']);
+      expect(ids(searchCatalog('inclinado')),
+          ['incline_bench_press', 'incline_dumbbell_press']);
+    });
+
     test('finds by English words in any order', () {
       expect(ids(searchCatalog('row cable')), ['seated_cable_row']);
     });

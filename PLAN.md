@@ -184,14 +184,14 @@ How they are drawn: one painter, each exercise is data (joint positions of a sti
 figure + a few equipment lines/circles on a 64x64 grid). No image files, no new
 package.
 
-Catalog (first version, about 28; names EN / ES):
+Catalog (first version, 30; names EN / ES):
 
 | Group     | Exercises |
 |-----------|-----------|
 | Back      | Lat pulldown / Jalon al pecho; Seated cable row / Remo sentado en polea; Barbell row / Remo con barra; One-arm dumbbell row / Remo con mancuerna; Pull-up / Dominadas; Deadlift / Peso muerto |
-| Chest     | Bench press flat / Press de banca plano; Incline bench press / Press de banca inclinado; Dumbbell bench press / Press con mancuernas; Chest fly machine / Aperturas en maquina; Cable crossover / Cruce de poleas; Push-up / Flexiones |
+| Chest     | Bench press flat / Press de banca plano; Incline bench press / Press de banca inclinado; Incline dumbbell press / Press inclinado con mancuernas; Dumbbell bench press / Press con mancuernas; Chest fly machine / Aperturas en maquina; Cable crossover / Cruce de poleas; Push-up / Flexiones |
 | Legs      | Squat / Sentadilla; Leg press / Prensa de piernas; Leg extension / Extension de cuadriceps; Leg curl / Curl femoral; Calf raise / Elevacion de gemelos; Lunge / Zancadas; Hip thrust / Empuje de cadera |
-| Shoulders | Shoulder press / Press militar; Lateral raise / Elevaciones laterales; Face pull / Face pull |
+| Shoulders | Shoulder press / Press militar; Lateral raise / Elevaciones laterales; Dumbbell shrug / Encogimientos de trapecio; Face pull / Face pull |
 | Arms      | Biceps curl / Curl de biceps; Hammer curl / Curl martillo; Triceps pushdown / Extension de triceps en polea; Dips / Fondos |
 | Core      | Plank / Plancha; Crunch / Abdominales |
 
