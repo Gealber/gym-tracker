@@ -1,9 +1,12 @@
 /// An exercise the user defined, e.g. "Bench press flat".
 class Exercise {
-  const Exercise({required this.id, required this.name});
+  const Exercise({required this.id, required this.name, this.catalogId});
 
   final int id;
   final String name;
+
+  /// Key of the built-in catalog entry (pictogram), null for custom ones.
+  final String? catalogId;
 }
 
 /// One set: a weight lifted for a number of repetitions.

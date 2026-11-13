@@ -11,6 +11,9 @@ import '../format.dart';
 import '../models.dart';
 import '../store.dart';
 import '../theme.dart';
+import '../widgets/name_dialog.dart';
+import '../widgets/pictogram.dart';
+import 'add_exercise.dart';
 import 'day.dart';
 import 'exercise.dart';
 
@@ -108,24 +111,16 @@ class _HomeTabState extends State<HomeTab> with ReloadOnChange {
     );
   }
 
-  Future<void> _addExercise() async {
-    final store = StoreScope.of(context);
-    final name = await askName(context, title: 'New exercise');
-    if (name == null) return;
-    try {
-      await store.repo.addExercise(name);
-      store.changed();
-    } on DuplicateNameException catch (error) {
-      _snack(error.toString());
-    }
-  }
+  Future<void> _addExercise() => Navigator.of(context).push<Exercise>(
+    MaterialPageRoute(builder: (_) => const AddExerciseScreen()),
+  );
 
   Future<void> _exerciseMenu(Exercise exercise) async {
     final store = StoreScope.of(context);
     final action = await showModalBottomSheet<String>(
       context: context,
       showDragHandle: true,
-      builder: (ctx) => SafeArea(
+      builder: (sheetContext) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -142,7 +137,12 @@ class _HomeTabState extends State<HomeTab> with ReloadOnChange {
             ListTile(
               leading: const Icon(Icons.edit_outlined),
               title: const Text('Rename'),
-              onTap: () => Navigator.pop(ctx, 'rename'),
+              onTap: () => Navigator.pop(sheetContext, 'rename'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.image_outlined),
+              title: const Text('Change picture'),
+              onTap: () => Navigator.pop(sheetContext, 'picture'),
             ),
             ListTile(
               leading: const Icon(Icons.delete_outline, color: Palette.danger),
@@ -150,7 +150,7 @@ class _HomeTabState extends State<HomeTab> with ReloadOnChange {
                 'Delete',
                 style: TextStyle(color: Palette.danger),
               ),
-              onTap: () => Navigator.pop(ctx, 'delete'),
+              onTap: () => Navigator.pop(sheetContext, 'delete'),
             ),
             const SizedBox(height: 8),
           ],
@@ -159,18 +159,32 @@ class _HomeTabState extends State<HomeTab> with ReloadOnChange {
     );
     if (!mounted || action == null) return;
     if (action == 'rename') {
-      final name = await askName(
+      final choice = await askName(
         context,
         title: 'Rename exercise',
         initial: exercise.name,
       );
-      if (name == null) return;
+      if (choice == null) return;
       try {
-        await store.repo.renameExercise(exercise.id, name);
+        await store.repo.renameExercise(exercise.id, choice.name);
+        // Renaming to a catalog name brings its picture; a custom name keeps
+        // whatever picture the exercise had.
+        if (choice.catalogId != null) {
+          await store.repo.setCatalogId(exercise.id, choice.catalogId);
+        }
         store.changed();
       } on DuplicateNameException catch (error) {
         _snack(error.toString());
       }
+    } else if (action == 'picture') {
+      final picked = await Navigator.of(context).push<PictureChoice>(
+        MaterialPageRoute(
+          builder: (_) => const AddExerciseScreen(pickPicture: true),
+        ),
+      );
+      if (picked == null) return;
+      await store.repo.setCatalogId(exercise.id, picked.entry?.id);
+      store.changed();
     } else if (action == 'delete') {
       final ok = await confirm(
         context,
@@ -293,6 +307,11 @@ class _ExerciseRow extends StatelessWidget {
       onLongPress: onLongPress,
       child: Row(
         children: [
+          ExerciseTile(
+            catalogId: summary.exercise.catalogId,
+            name: summary.exercise.name,
+          ),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -347,64 +366,6 @@ class _ExerciseRow extends StatelessWidget {
   }
 }
 
-/// Text dialog for an exercise name. Returns the name or null on cancel.
-Future<String?> askName(
-  BuildContext context, {
-  required String title,
-  String initial = '',
-}) => showDialog<String>(
-  context: context,
-  builder: (_) => _NameDialog(title: title, initial: initial),
-);
-
-/// Owns its controller so it is disposed after the closing animation, not
-/// while the dialog is still on screen.
-class _NameDialog extends StatefulWidget {
-  const _NameDialog({required this.title, required this.initial});
-
-  final String title;
-  final String initial;
-
-  @override
-  State<_NameDialog> createState() => _NameDialogState();
-}
-
-class _NameDialogState extends State<_NameDialog> {
-  late final _controller = TextEditingController(text: widget.initial);
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  void _submit() {
-    final name = _controller.text.trim();
-    if (name.isNotEmpty) Navigator.pop(context, name);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Text(widget.title),
-      content: TextField(
-        controller: _controller,
-        autofocus: true,
-        textCapitalization: TextCapitalization.sentences,
-        decoration: const InputDecoration(hintText: 'e.g. Bench press flat'),
-        onSubmitted: (_) => _submit(),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
-        ),
-        TextButton(onPressed: _submit, child: const Text('Save')),
-      ],
-    );
-  }
-}
-
 /// Yes/no dialog. Returns true only when [action] was tapped.
 Future<bool> confirm(
   BuildContext context, {
@@ -414,16 +375,16 @@ Future<bool> confirm(
 }) async {
   final ok = await showDialog<bool>(
     context: context,
-    builder: (ctx) => AlertDialog(
+    builder: (dialogContext) => AlertDialog(
       title: Text(title),
       content: Text(body, style: const TextStyle(color: Palette.muted)),
       actions: [
         TextButton(
-          onPressed: () => Navigator.pop(ctx, false),
+          onPressed: () => Navigator.pop(dialogContext, false),
           child: const Text('Cancel'),
         ),
         TextButton(
-          onPressed: () => Navigator.pop(ctx, true),
+          onPressed: () => Navigator.pop(dialogContext, true),
           style: TextButton.styleFrom(foregroundColor: Palette.danger),
           child: Text(action),
         ),

@@ -20,7 +20,7 @@ class Repo {
   final Database _db;
 
   /// Stored in PRAGMA user_version; bump it and add a step in [_upgrade].
-  static const schemaVersion = 1;
+  static const schemaVersion = 2;
 
   /// Opens (creating if needed) the database at [path]. [factory] is
   /// sqflite's on the phone and sqflite_common_ffi's in tests.
@@ -59,6 +59,9 @@ class Repo {
       );
       await db.execute('CREATE INDEX sets_day ON sets(day)');
     }
+    if (from < 2) {
+      await db.execute('ALTER TABLE exercises ADD COLUMN catalog_id TEXT');
+    }
   }
 
   Future<void> close() => _db.close();
@@ -71,14 +74,20 @@ class Repo {
   }
 
   /// Adds an exercise. The name is trimmed and must not be empty.
-  Future<Exercise> addExercise(String name, {DateTime? now}) async {
+  /// [catalogId] links it to a built-in catalog entry (its pictogram).
+  Future<Exercise> addExercise(
+    String name, {
+    String? catalogId,
+    DateTime? now,
+  }) async {
     final clean = _cleanName(name);
     try {
       final id = await _db.insert('exercises', {
         'name': clean,
+        'catalog_id': catalogId,
         'created_at': (now ?? DateTime.now()).millisecondsSinceEpoch,
       });
-      return Exercise(id: id, name: clean);
+      return Exercise(id: id, name: clean, catalogId: catalogId);
     } on DatabaseException catch (error) {
       if (error.isUniqueConstraintError()) throw DuplicateNameException(clean);
       rethrow;
@@ -99,6 +108,14 @@ class Repo {
       rethrow;
     }
   }
+
+  /// Links an exercise to a catalog entry, or unlinks it with null.
+  Future<void> setCatalogId(int id, String? catalogId) => _db.update(
+    'exercises',
+    {'catalog_id': catalogId},
+    where: 'id = ?',
+    whereArgs: [id],
+  );
 
   /// Deletes the exercise and, through the foreign key, all its sets.
   Future<void> deleteExercise(int id) =>
@@ -223,7 +240,7 @@ class Repo {
   Future<List<DayEntry>> dayLog(DateTime day) async {
     final rows = await _db.rawQuery(
       '''
-      SELECT exercises.id, exercises.name, sets.kg, sets.reps
+      SELECT exercises.id, exercises.name, exercises.catalog_id, sets.kg, sets.reps
       FROM sets JOIN exercises ON exercises.id = sets.exercise_id
       WHERE sets.day = ?
       ORDER BY (SELECT MIN(first.id) FROM sets AS first
@@ -237,7 +254,7 @@ class Repo {
       if (out.isEmpty || out.last.exercise.id != id) {
         out.add(
           DayEntry(
-            exercise: Exercise(id: id, name: row['name']! as String),
+            exercise: _exercise(row),
             sets: [],
           ),
         );
@@ -273,7 +290,11 @@ class Repo {
   }
 
   static Exercise _exercise(Map<String, Object?> row) =>
-      Exercise(id: row['id']! as int, name: row['name']! as String);
+      Exercise(
+        id: row['id']! as int,
+        name: row['name']! as String,
+        catalogId: row['catalog_id'] as String?,
+      );
 
   static WorkSet _set(Map<String, Object?> row) =>
       WorkSet(kg: (row['kg']! as num).toDouble(), reps: row['reps']! as int);

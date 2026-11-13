@@ -168,7 +168,7 @@ versioned with `PRAGMA user_version` for later migrations; foreign keys on.
 - Export only. No import for now (if ever, it would insert rows into SQLite, not
   replace storage).
 
-## Exercise catalog with pictograms (planned, 2026-11-13)
+## Exercise catalog with pictograms (built 2026-11-13, not yet tried on the phone)
 
 Problem: at the gym you see a machine and don't know its name, in English or Spanish.
 So "Add exercise" opens a built-in catalog: each exercise has a small picture, its
@@ -203,7 +203,11 @@ Add exercise screen:
   Shoulders, Arms, Core.
 - Grid of cards: pictogram, English name, Spanish name below in grey.
 - Already added ones are marked and not added twice.
-- At the bottom: "Custom exercise" -> the current name dialog.
+- At the bottom: "Custom exercise" -> the name dialog, with AUTOCOMPLETE: while
+  typing, catalog exercises matching the English or Spanish name (accents ignored,
+  "jalon" finds "Jalon al pecho") are suggested with their pictogram. Picking one
+  fills the name and links the picture; typing something else keeps it custom.
+  The rename dialog autocompletes the same way.
 - The exercise is added with the English name; it can still be renamed.
 
 Where the pictogram shows: home list rows, exercise screen header, day view.

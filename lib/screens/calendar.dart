@@ -6,6 +6,7 @@ import '../models.dart';
 import '../store.dart';
 import '../theme.dart';
 import 'day.dart';
+import 'pick_exercise.dart';
 
 /// Tab 2: a month grid marking the days with any logged set.
 class CalendarTab extends StatefulWidget {
@@ -195,15 +196,21 @@ class _CalendarTabState extends State<CalendarTab> with ReloadOnChange {
       child: number,
     );
     final cell = SizedBox(height: 46, child: Center(child: circle));
-    if (!trained) return cell;
+    if (future) return cell;
+    // A trained day opens its log; an empty past day (or today) asks which
+    // exercise to log on it.
     return Semantics(
       button: true,
-      label: 'Trained on ${formatDay(day)}',
+      label: trained
+          ? 'Trained on ${formatDay(day)}'
+          : 'Log a workout on ${formatDay(day)}',
       child: InkWell(
         customBorder: const CircleBorder(),
-        onTap: () => Navigator.of(
-          context,
-        ).push(MaterialPageRoute<void>(builder: (_) => DayScreen(day: day))),
+        onTap: trained
+            ? () => Navigator.of(context).push(
+                MaterialPageRoute<void>(builder: (_) => DayScreen(day: day)),
+              )
+            : () => logExerciseOnDay(context, day),
         child: cell,
       ),
     );

@@ -5,6 +5,7 @@ import '../models.dart';
 import '../stats.dart';
 import '../store.dart';
 import '../theme.dart';
+import '../widgets/pictogram.dart';
 import '../widgets/progress_chart.dart';
 import 'log_workout.dart';
 
@@ -56,9 +57,25 @@ class _ExerciseScreenState extends State<ExerciseScreen> with ReloadOnChange {
     final sessions = _sessions;
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          widget.exercise.name,
-          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+        title: Row(
+          children: [
+            ExerciseTile(
+              catalogId: widget.exercise.catalogId,
+              name: widget.exercise.name,
+              size: 36,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                widget.exercise.name,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(

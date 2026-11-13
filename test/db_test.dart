@@ -241,4 +241,74 @@ void main() {
     expect(version.single.values.single, Repo.schemaVersion);
     await raw.close();
   });
+
+  group('catalog link', () {
+    test('stored on add, changed and cleared later', () async {
+      final exercise =
+          await repo.addExercise('Lat pulldown', catalogId: 'lat_pulldown');
+      expect(exercise.catalogId, 'lat_pulldown');
+      expect((await repo.exercises()).single.catalogId, 'lat_pulldown');
+
+      await repo.setCatalogId(exercise.id, 'pull_up');
+      expect((await repo.summaries()).single.exercise.catalogId, 'pull_up');
+      await repo.setCatalogId(exercise.id, null);
+      expect((await repo.exercises()).single.catalogId, isNull);
+    });
+
+    test('the day log carries it', () async {
+      final exercise =
+          await repo.addExercise('Seated cable row', catalogId: 'seated_cable_row');
+      await repo.saveDay(exercise.id, DateTime(2026, 11, 12), const [
+        WorkSet(kg: 45, reps: 10),
+      ]);
+      final log = await repo.dayLog(DateTime(2026, 11, 12));
+      expect(log.single.exercise.catalogId, 'seated_cable_row');
+    });
+  });
+
+  test('a version 1 database upgrades to version 2 and keeps its data',
+      () async {
+    await repo.close();
+    final oldPath = '${dir.path}/old.db';
+    // The schema exactly as version 1 created it.
+    final old = await databaseFactoryFfi.openDatabase(
+      oldPath,
+      options: OpenDatabaseOptions(singleInstance: false),
+    );
+    await old.execute('''
+      CREATE TABLE exercises (
+        id INTEGER PRIMARY KEY,
+        name TEXT NOT NULL UNIQUE COLLATE NOCASE,
+        created_at INTEGER NOT NULL
+      )''');
+    await old.execute('''
+      CREATE TABLE sets (
+        id INTEGER PRIMARY KEY,
+        exercise_id INTEGER NOT NULL REFERENCES exercises(id) ON DELETE CASCADE,
+        day TEXT NOT NULL,
+        position INTEGER NOT NULL,
+        kg REAL NOT NULL,
+        reps INTEGER NOT NULL
+      )''');
+    await old.insert('exercises', {'id': 1, 'name': 'Bench', 'created_at': 0});
+    await old.insert('sets', {
+      'exercise_id': 1,
+      'day': '2026-11-11',
+      'position': 1,
+      'kg': 45.0,
+      'reps': 2,
+    });
+    await old.execute('PRAGMA user_version = 1');
+    await old.close();
+
+    repo = await Repo.open(databaseFactoryFfi, oldPath);
+    final exercises = await repo.exercises();
+    expect(exercises.single.name, 'Bench');
+    expect(exercises.single.catalogId, isNull);
+    expect((await repo.sessions(1)).single.sets, const [
+      WorkSet(kg: 45, reps: 2),
+    ]);
+    await repo.setCatalogId(1, 'bench_press');
+    expect((await repo.exercises()).single.catalogId, 'bench_press');
+  });
 }

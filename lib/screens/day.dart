@@ -4,9 +4,11 @@ import '../format.dart';
 import '../models.dart';
 import '../store.dart';
 import '../theme.dart';
+import '../widgets/pictogram.dart';
 import 'log_workout.dart';
+import 'pick_exercise.dart';
 
-/// Read-only view of everything done on one day.
+/// Everything done on one day; each exercise can be edited and more added.
 class DayScreen extends StatefulWidget {
   const DayScreen({super.key, required this.day});
 
@@ -49,6 +51,11 @@ class _DayScreenState extends State<DayScreen> with ReloadOnChange {
           ],
         ),
       ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => logExerciseOnDay(context, widget.day),
+        icon: const Icon(Icons.add),
+        label: const Text('Add exercise to this day'),
+      ),
       body: entries == null
           ? const SizedBox.shrink()
           : entries.isEmpty
@@ -59,7 +66,7 @@ class _DayScreenState extends State<DayScreen> with ReloadOnChange {
               ),
             )
           : ListView(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
               children: [
                 for (final entry in entries)
                   Padding(
@@ -97,6 +104,12 @@ class _EntryCard extends StatelessWidget {
         children: [
           Row(
             children: [
+              ExerciseTile(
+                catalogId: entry.exercise.catalogId,
+                name: entry.exercise.name,
+                size: 36,
+              ),
+              const SizedBox(width: 12),
               Expanded(
                 child: Text(
                   entry.exercise.name,
