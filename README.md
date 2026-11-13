@@ -13,6 +13,16 @@ database.
 
 Status: in development, see [PLAN.md](PLAN.md).
 
+## Screenshots
+
+| Exercises | Progress chart | Log workout |
+|-----------|----------------|-------------|
+| ![Exercises](docs/screenshots/home.png) | ![Progress chart](docs/screenshots/exercise.png) | ![Log workout](docs/screenshots/log.png) |
+
+| Day view | Calendar | Exercise catalog |
+|----------|----------|------------------|
+| ![Day view](docs/screenshots/day.png) | ![Calendar](docs/screenshots/calendar.png) | ![Exercise catalog](docs/screenshots/catalog.png) |
+
 ## Build and install
 
 Needs Flutter and the Android SDK.
