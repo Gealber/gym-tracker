@@ -104,8 +104,11 @@ Bottom bar with two tabs: **Exercises** (default) and **Calendar**.
      plain muted number. Today = purple ring (also when it is a trained day).
    - Under the title: "9 days this month" (trained days in the shown month), and for
      the current month "this week: 3".
-   - Tap a trained day -> that day's read-only view (screen 5). Tapping an empty day
-     does nothing.
+   - Tap a trained day -> that day's view (screen 5), where each exercise can be
+     edited and more exercises added for that day.
+   - Tap an empty PAST day (or today) -> pick an exercise -> Log workout for that
+     day. Future days do nothing. (Logging past days is also possible from Log
+     workout itself: tap the date, "Change".)
    - "Trained" = at least one set of any exercise that day. Comes straight from
      `SELECT DISTINCT day FROM sets`; no new table.
    - Drawn by hand (a 7-column grid), no calendar package.
@@ -114,6 +117,8 @@ Bottom bar with two tabs: **Exercises** (default) and **Calendar**.
    - Date as title; every exercise done that day with all its sets in order.
    - Reached from the "Last workout" header and from calendar taps. Each exercise has
      an "Edit" link that opens Log workout for that exercise and day.
+   - "Add exercise to this day" button -> pick an exercise -> Log workout for that
+     day, so a forgotten exercise can be filled in afterwards.
 
 ## How "stronger" is measured
 
@@ -162,6 +167,52 @@ versioned with `PRAGMA user_version` for later migrations; foreign keys on.
 - Names with commas or quotes are quoted per RFC 4180. kg uses `.` as decimal.
 - Export only. No import for now (if ever, it would insert rows into SQLite, not
   replace storage).
+
+## Exercise catalog with pictograms (planned, 2026-11-13)
+
+Problem: at the gym you see a machine and don't know its name, in English or Spanish.
+So "Add exercise" opens a built-in catalog: each exercise has a small picture, its
+English name and its Spanish name. Typing a custom name stays possible.
+
+Pictures: our own pictograms, drawn in code (a figure plus the machine, yellow on a
+purple tile). Not photos: the free photo sets found (free-exercise-db) license the
+data as public domain but say nothing about the images or where they came from, so
+they can't go into a public repo safely. Own drawings: no license question, small,
+match the theme, same style for every exercise.
+
+How they are drawn: one painter, each exercise is data (joint positions of a stick
+figure + a few equipment lines/circles on a 64x64 grid). No image files, no new
+package.
+
+Catalog (first version, about 28; names EN / ES):
+
+| Group     | Exercises |
+|-----------|-----------|
+| Back      | Lat pulldown / Jalon al pecho; Seated cable row / Remo sentado en polea; Barbell row / Remo con barra; One-arm dumbbell row / Remo con mancuerna; Pull-up / Dominadas; Deadlift / Peso muerto |
+| Chest     | Bench press flat / Press de banca plano; Incline bench press / Press de banca inclinado; Dumbbell bench press / Press con mancuernas; Chest fly machine / Aperturas en maquina; Cable crossover / Cruce de poleas; Push-up / Flexiones |
+| Legs      | Squat / Sentadilla; Leg press / Prensa de piernas; Leg extension / Extension de cuadriceps; Leg curl / Curl femoral; Calf raise / Elevacion de gemelos; Lunge / Zancadas; Hip thrust / Empuje de cadera |
+| Shoulders | Shoulder press / Press militar; Lateral raise / Elevaciones laterales; Face pull / Face pull |
+| Arms      | Biceps curl / Curl de biceps; Hammer curl / Curl martillo; Triceps pushdown / Extension de triceps en polea; Dips / Fondos |
+| Core      | Plank / Plancha; Crunch / Abdominales |
+
+(Accents shown without marks here; in the app the Spanish names carry them, written
+as `\u00f3`-style escapes so the source stays plain ASCII.)
+
+Add exercise screen:
+- Search box (matches English or Spanish name), group chips: All, Back, Chest, Legs,
+  Shoulders, Arms, Core.
+- Grid of cards: pictogram, English name, Spanish name below in grey.
+- Already added ones are marked and not added twice.
+- At the bottom: "Custom exercise" -> the current name dialog.
+- The exercise is added with the English name; it can still be renamed.
+
+Where the pictogram shows: home list rows, exercise screen header, day view.
+Custom exercises (no picture) show their first letter on the same purple tile.
+Existing exercises: long-press -> "Change picture" picks one from the catalog.
+
+Data: `exercises.catalog_id TEXT NULL` (the catalog key, e.g. `lat_pulldown`);
+schema version 2, `ALTER TABLE exercises ADD COLUMN catalog_id TEXT`. The catalog
+itself is code, not a table (it ships with the app; the DB keeps only the link).
 
 ## Code layout
 
