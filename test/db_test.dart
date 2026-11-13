@@ -15,11 +15,15 @@ const bench = [
 
 /// Rows in the sets table, read through a second connection.
 Future<int> rawSetCount(String path) async {
-  final raw = await databaseFactoryFfi.openDatabase(path,
-      options: OpenDatabaseOptions(singleInstance: false));
-  final n = (await raw.rawQuery('SELECT COUNT(*) AS n FROM sets')).single['n']!;
+  final raw = await databaseFactoryFfi.openDatabase(
+    path,
+    options: OpenDatabaseOptions(singleInstance: false),
+  );
+  final count = (await raw.rawQuery(
+    'SELECT COUNT(*) AS count FROM sets',
+  )).single['count']!;
   await raw.close();
-  return n as int;
+  return count as int;
 }
 
 void main() {
@@ -41,30 +45,37 @@ void main() {
 
   group('exercises', () {
     test('names are trimmed and unique ignoring case', () async {
-      final e = await repo.addExercise('  Bench   press flat ');
-      expect(e.name, 'Bench press flat');
-      expect(() => repo.addExercise('bench PRESS flat'),
-          throwsA(isA<DuplicateNameException>()));
+      final exercise = await repo.addExercise('  Bench   press flat ');
+      expect(exercise.name, 'Bench press flat');
+      expect(
+        () => repo.addExercise('bench PRESS flat'),
+        throwsA(isA<DuplicateNameException>()),
+      );
       expect(() => repo.addExercise('   '), throwsArgumentError);
     });
 
     test('rename to a taken name fails, to a free name works', () async {
-      final a = await repo.addExercise('Squat');
+      final squat = await repo.addExercise('Squat');
       await repo.addExercise('Deadlift');
-      expect(() => repo.renameExercise(a.id, 'deadlift'),
-          throwsA(isA<DuplicateNameException>()));
-      await repo.renameExercise(a.id, 'Back squat');
-      expect([for (final e in await repo.exercises()) e.name],
-          ['Back squat', 'Deadlift']);
+      expect(
+        () => repo.renameExercise(squat.id, 'deadlift'),
+        throwsA(isA<DuplicateNameException>()),
+      );
+      await repo.renameExercise(squat.id, 'Back squat');
+      expect(
+        [for (final exercise in await repo.exercises()) exercise.name],
+        ['Back squat', 'Deadlift'],
+      );
     });
 
     test('deleting an exercise deletes its sets (foreign keys on)', () async {
-      final a = await repo.addExercise('Bench');
-      final b = await repo.addExercise('Squat');
-      await repo.saveDay(a.id, DateTime(2026, 11, 11), bench);
-      await repo.saveDay(b.id, DateTime(2026, 11, 11),
-          const [WorkSet(kg: 60, reps: 5)]);
-      await repo.deleteExercise(a.id);
+      final benchPress = await repo.addExercise('Bench');
+      final squat = await repo.addExercise('Squat');
+      await repo.saveDay(benchPress.id, DateTime(2026, 11, 11), bench);
+      await repo.saveDay(squat.id, DateTime(2026, 11, 11), const [
+        WorkSet(kg: 60, reps: 5),
+      ]);
+      await repo.deleteExercise(benchPress.id);
       // Count raw rows: allSets() joins exercises and would hide orphans.
       expect(await rawSetCount(path), 1);
       expect((await repo.allSets()).single.exercise, 'Squat');
@@ -73,129 +84,161 @@ void main() {
 
   group('saveDay', () {
     test('keeps the sets in order', () async {
-      final e = await repo.addExercise('Bench');
-      await repo.saveDay(e.id, DateTime(2026, 11, 11), bench);
-      final s = await repo.session(e.id, DateTime(2026, 11, 11));
-      expect(s!.sets, bench);
+      final exercise = await repo.addExercise('Bench');
+      await repo.saveDay(exercise.id, DateTime(2026, 11, 11), bench);
+      final session = await repo.session(exercise.id, DateTime(2026, 11, 11));
+      expect(session!.sets, bench);
     });
 
     test('saving the same day again replaces it', () async {
-      final e = await repo.addExercise('Bench');
+      final exercise = await repo.addExercise('Bench');
       final day = DateTime(2026, 11, 11);
-      await repo.saveDay(e.id, day, bench);
-      await repo.saveDay(e.id, day, const [WorkSet(kg: 50, reps: 1)]);
-      final all = await repo.sessions(e.id);
+      await repo.saveDay(exercise.id, day, bench);
+      await repo.saveDay(exercise.id, day, const [WorkSet(kg: 50, reps: 1)]);
+      final all = await repo.sessions(exercise.id);
       expect(all.length, 1);
       expect(all.single.sets, const [WorkSet(kg: 50, reps: 1)]);
     });
 
     test('an empty list deletes the day', () async {
-      final e = await repo.addExercise('Bench');
+      final exercise = await repo.addExercise('Bench');
       final day = DateTime(2026, 11, 11);
-      await repo.saveDay(e.id, day, bench);
-      await repo.saveDay(e.id, day, const []);
-      expect(await repo.session(e.id, day), isNull);
+      await repo.saveDay(exercise.id, day, bench);
+      await repo.saveDay(exercise.id, day, const []);
+      expect(await repo.session(exercise.id, day), isNull);
       expect(await repo.lastWorkoutDay(), isNull);
     });
 
     test('rejects zero reps and negative kg, writes nothing', () async {
-      final e = await repo.addExercise('Bench');
+      final exercise = await repo.addExercise('Bench');
       final day = DateTime(2026, 11, 11);
-      expect(() => repo.saveDay(e.id, day, const [WorkSet(kg: 40, reps: 0)]),
-          throwsArgumentError);
-      expect(() => repo.saveDay(e.id, day, const [WorkSet(kg: -1, reps: 5)]),
-          throwsArgumentError);
-      expect(await repo.session(e.id, day), isNull);
+      expect(
+        () => repo.saveDay(exercise.id, day, const [WorkSet(kg: 40, reps: 0)]),
+        throwsArgumentError,
+      );
+      expect(
+        () => repo.saveDay(exercise.id, day, const [WorkSet(kg: -1, reps: 5)]),
+        throwsArgumentError,
+      );
+      expect(await repo.session(exercise.id, day), isNull);
     });
 
     test('0 kg is allowed (bodyweight)', () async {
-      final e = await repo.addExercise('Pull up');
-      await repo.saveDay(e.id, DateTime(2026, 11, 11),
-          const [WorkSet(kg: 0, reps: 8)]);
-      expect((await repo.sessions(e.id)).single.sets.single.kg, 0);
+      final exercise = await repo.addExercise('Pull up');
+      await repo.saveDay(exercise.id, DateTime(2026, 11, 11), const [
+        WorkSet(kg: 0, reps: 8),
+      ]);
+      expect((await repo.sessions(exercise.id)).single.sets.single.kg, 0);
     });
   });
 
   group('reading back', () {
     test('sessions newest first, previousSession strictly before', () async {
-      final e = await repo.addExercise('Bench');
-      await repo.saveDay(e.id, DateTime(2026, 11, 4),
-          const [WorkSet(kg: 42.5, reps: 3)]);
-      await repo.saveDay(e.id, DateTime(2026, 11, 11), bench);
-      final all = await repo.sessions(e.id);
-      expect([for (final s in all) s.day],
-          [DateTime(2026, 11, 11), DateTime(2026, 11, 4)]);
+      final exercise = await repo.addExercise('Bench');
+      await repo.saveDay(exercise.id, DateTime(2026, 11, 4), const [
+        WorkSet(kg: 42.5, reps: 3),
+      ]);
+      await repo.saveDay(exercise.id, DateTime(2026, 11, 11), bench);
+      final all = await repo.sessions(exercise.id);
+      expect(
+        [for (final session in all) session.day],
+        [DateTime(2026, 11, 11), DateTime(2026, 11, 4)],
+      );
 
-      final prevToday = await repo.previousSession(e.id, DateTime(2026, 11, 13));
+      final prevToday = await repo.previousSession(
+        exercise.id,
+        DateTime(2026, 11, 13),
+      );
       expect(prevToday!.day, DateTime(2026, 11, 11));
       expect(prevToday.sets, bench);
-      final prevOf11 = await repo.previousSession(e.id, DateTime(2026, 11, 11));
+      final prevOf11 = await repo.previousSession(
+        exercise.id,
+        DateTime(2026, 11, 11),
+      );
       expect(prevOf11!.day, DateTime(2026, 11, 4));
-      expect(await repo.previousSession(e.id, DateTime(2026, 11, 4)), isNull);
+      expect(
+        await repo.previousSession(exercise.id, DateTime(2026, 11, 4)),
+        isNull,
+      );
     });
 
     test('summaries: most recent first, never trained last', () async {
       final bench1 = await repo.addExercise('Bench');
       final squat = await repo.addExercise('Squat');
       await repo.addExercise('Row');
-      await repo.saveDay(bench1.id, DateTime(2026, 10, 8),
-          const [WorkSet(kg: 40, reps: 5)]);
+      await repo.saveDay(bench1.id, DateTime(2026, 10, 8), const [
+        WorkSet(kg: 40, reps: 5),
+      ]);
       await repo.saveDay(bench1.id, DateTime(2026, 11, 11), bench);
-      await repo.saveDay(squat.id, DateTime(2026, 11, 9),
-          const [WorkSet(kg: 60, reps: 5)]);
+      await repo.saveDay(squat.id, DateTime(2026, 11, 9), const [
+        WorkSet(kg: 60, reps: 5),
+      ]);
 
-      final s = await repo.summaries();
-      expect([for (final x in s) x.exercise.name], ['Bench', 'Squat', 'Row']);
-      expect(s[0].lastDay, DateTime(2026, 11, 11));
-      expect(s[0].lastTop, const WorkSet(kg: 45, reps: 2));
-      expect(s[0].monthChangeKg, 5);
-      expect(s[1].monthChangeKg, isNull);
-      expect(s[2].lastDay, isNull);
-      expect(s[2].lastTop, isNull);
+      final summaries = await repo.summaries();
+      expect(
+        [for (final summary in summaries) summary.exercise.name],
+        ['Bench', 'Squat', 'Row'],
+      );
+      expect(summaries[0].lastDay, DateTime(2026, 11, 11));
+      expect(summaries[0].lastTop, const WorkSet(kg: 45, reps: 2));
+      expect(summaries[0].monthChangeKg, 5);
+      expect(summaries[1].monthChangeKg, isNull);
+      expect(summaries[2].lastDay, isNull);
+      expect(summaries[2].lastTop, isNull);
     });
 
     test('trained days, last workout and the day log', () async {
-      final b = await repo.addExercise('Bench');
-      final l = await repo.addExercise('Lat pulldown');
-      await repo.saveDay(l.id, DateTime(2026, 11, 11),
-          const [WorkSet(kg: 50, reps: 10)]);
-      await repo.saveDay(b.id, DateTime(2026, 11, 11), bench);
-      await repo.saveDay(b.id, DateTime(2026, 11, 4),
-          const [WorkSet(kg: 42.5, reps: 3)]);
+      final benchPress = await repo.addExercise('Bench');
+      final latPulldown = await repo.addExercise('Lat pulldown');
+      await repo.saveDay(latPulldown.id, DateTime(2026, 11, 11), const [
+        WorkSet(kg: 50, reps: 10),
+      ]);
+      await repo.saveDay(benchPress.id, DateTime(2026, 11, 11), bench);
+      await repo.saveDay(benchPress.id, DateTime(2026, 11, 4), const [
+        WorkSet(kg: 42.5, reps: 3),
+      ]);
 
-      expect(await repo.trainedDays(),
-          {DateTime(2026, 11, 4), DateTime(2026, 11, 11)});
+      expect(await repo.trainedDays(), {
+        DateTime(2026, 11, 4),
+        DateTime(2026, 11, 11),
+      });
       expect(await repo.lastWorkoutDay(), DateTime(2026, 11, 11));
 
       final log = await repo.dayLog(DateTime(2026, 11, 11));
       // Order logged: lat pulldown first, then bench.
-      expect([for (final d in log) d.exercise.name], ['Lat pulldown', 'Bench']);
+      expect(
+        [for (final entry in log) entry.exercise.name],
+        ['Lat pulldown', 'Bench'],
+      );
       expect(log[1].sets, bench);
       expect(await repo.dayLog(DateTime(2026, 11, 12)), isEmpty);
     });
 
     test('allSets oldest first with positions', () async {
-      final b = await repo.addExercise('Bench');
-      await repo.saveDay(b.id, DateTime(2026, 11, 11), bench);
-      await repo.saveDay(b.id, DateTime(2026, 11, 4),
-          const [WorkSet(kg: 42.5, reps: 3)]);
+      final benchPress = await repo.addExercise('Bench');
+      await repo.saveDay(benchPress.id, DateTime(2026, 11, 11), bench);
+      await repo.saveDay(benchPress.id, DateTime(2026, 11, 4), const [
+        WorkSet(kg: 42.5, reps: 3),
+      ]);
       final rows = await repo.allSets();
       expect(rows.first.day, DateTime(2026, 11, 4));
-      expect([for (final r in rows.skip(1)) r.position], [1, 2, 3, 4, 5]);
+      expect([for (final row in rows.skip(1)) row.position], [1, 2, 3, 4, 5]);
     });
   });
 
   test('data survives reopening; schema version is stored', () async {
-    final e = await repo.addExercise('Bench');
-    await repo.saveDay(e.id, DateTime(2026, 11, 11), bench);
+    final exercise = await repo.addExercise('Bench');
+    await repo.saveDay(exercise.id, DateTime(2026, 11, 11), bench);
     await repo.close();
     repo = await Repo.open(databaseFactoryFfi, path);
-    expect((await repo.sessions(e.id)).single.sets, bench);
+    expect((await repo.sessions(exercise.id)).single.sets, bench);
 
-    final raw = await databaseFactoryFfi.openDatabase(path,
-        options: OpenDatabaseOptions(singleInstance: false, readOnly: true));
-    final v = await raw.rawQuery('PRAGMA user_version');
-    expect(v.single.values.single, Repo.schemaVersion);
+    final raw = await databaseFactoryFfi.openDatabase(
+      path,
+      options: OpenDatabaseOptions(singleInstance: false, readOnly: true),
+    );
+    final version = await raw.rawQuery('PRAGMA user_version');
+    expect(version.single.values.single, Repo.schemaVersion);
     await raw.close();
   });
 }

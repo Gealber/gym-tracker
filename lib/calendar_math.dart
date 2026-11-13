@@ -10,7 +10,12 @@ List<int?> monthGrid(int year, int month) {
   final leading = DateTime(year, month, 1).weekday - 1;
   return [
     for (var i = 0; i < leading; i++) null,
-    for (var d = 1; d <= daysInMonth(year, month); d++) d,
+    for (
+      var dayOfMonth = 1;
+      dayOfMonth <= daysInMonth(year, month);
+      dayOfMonth++
+    )
+      dayOfMonth,
   ];
 }
 
@@ -20,11 +25,13 @@ DateTime weekStart(DateTime day) =>
 
 /// How many of [trained] fall in the given month.
 int trainedInMonth(Set<DateTime> trained, int year, int month) =>
-    trained.where((d) => d.year == year && d.month == month).length;
+    trained.where((day) => day.year == year && day.month == month).length;
 
 /// How many of [trained] fall in the Monday-to-Sunday week holding [today].
 int trainedInWeek(Set<DateTime> trained, DateTime today) {
   final start = weekStart(today);
   final end = DateTime(start.year, start.month, start.day + 7);
-  return trained.where((d) => !d.isBefore(start) && d.isBefore(end)).length;
+  return trained
+      .where((day) => !day.isBefore(start) && day.isBefore(end))
+      .length;
 }

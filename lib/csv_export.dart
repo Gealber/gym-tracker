@@ -4,27 +4,27 @@ import 'models.dart';
 /// CSV text for [rows]: header plus one line per set, RFC 4180 quoting,
 /// CRLF line ends, kg with '.' as decimal.
 String toCsv(List<SetRow> rows) {
-  final b = StringBuffer('date,exercise,set,kg,reps\r\n');
-  for (final r in rows) {
-    b
-      ..write(dayKey(r.day))
+  final buffer = StringBuffer('date,exercise,set,kg,reps\r\n');
+  for (final row in rows) {
+    buffer
+      ..write(dayKey(row.day))
       ..write(',')
-      ..write(_field(r.exercise))
+      ..write(_field(row.exercise))
       ..write(',')
-      ..write(r.position)
+      ..write(row.position)
       ..write(',')
-      ..write(formatKg(r.set.kg))
+      ..write(formatKg(row.set.kg))
       ..write(',')
-      ..write(r.set.reps)
+      ..write(row.set.reps)
       ..write('\r\n');
   }
-  return b.toString();
+  return buffer.toString();
 }
 
 /// File name for an export made on [now].
 String csvFileName(DateTime now) => 'gym-${dayKey(now)}.csv';
 
-String _field(String s) {
-  if (!s.contains(RegExp(r'[",\r\n]'))) return s;
-  return '"${s.replaceAll('"', '""')}"';
+String _field(String value) {
+  if (!value.contains(RegExp(r'[",\r\n]'))) return value;
+  return '"${value.replaceAll('"', '""')}"';
 }

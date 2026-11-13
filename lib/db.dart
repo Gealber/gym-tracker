@@ -54,7 +54,9 @@ class Repo {
           kg REAL NOT NULL,
           reps INTEGER NOT NULL
         )''');
-      await db.execute('CREATE INDEX sets_exercise_day ON sets(exercise_id, day)');
+      await db.execute(
+        'CREATE INDEX sets_exercise_day ON sets(exercise_id, day)',
+      );
       await db.execute('CREATE INDEX sets_day ON sets(day)');
     }
   }
@@ -65,7 +67,7 @@ class Repo {
 
   Future<List<Exercise>> exercises() async {
     final rows = await _db.query('exercises', orderBy: 'name COLLATE NOCASE');
-    return [for (final r in rows) _exercise(r)];
+    return [for (final row in rows) _exercise(row)];
   }
 
   /// Adds an exercise. The name is trimmed and must not be empty.
@@ -77,8 +79,8 @@ class Repo {
         'created_at': (now ?? DateTime.now()).millisecondsSinceEpoch,
       });
       return Exercise(id: id, name: clean);
-    } on DatabaseException catch (e) {
-      if (e.isUniqueConstraintError()) throw DuplicateNameException(clean);
+    } on DatabaseException catch (error) {
+      if (error.isUniqueConstraintError()) throw DuplicateNameException(clean);
       rethrow;
     }
   }
@@ -86,10 +88,14 @@ class Repo {
   Future<void> renameExercise(int id, String name) async {
     final clean = _cleanName(name);
     try {
-      await _db.update('exercises', {'name': clean},
-          where: 'id = ?', whereArgs: [id]);
-    } on DatabaseException catch (e) {
-      if (e.isUniqueConstraintError()) throw DuplicateNameException(clean);
+      await _db.update(
+        'exercises',
+        {'name': clean},
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+    } on DatabaseException catch (error) {
+      if (error.isUniqueConstraintError()) throw DuplicateNameException(clean);
       rethrow;
     }
   }
@@ -103,15 +109,18 @@ class Repo {
   /// Replaces everything logged for [exerciseId] on [day] with [sets], in
   /// order. An empty list deletes the day.
   Future<void> saveDay(int exerciseId, DateTime day, List<WorkSet> sets) async {
-    for (final s in sets) {
-      if (s.kg < 0 || s.reps < 1) {
-        throw ArgumentError('invalid set: $s');
+    for (final set in sets) {
+      if (set.kg < 0 || set.reps < 1) {
+        throw ArgumentError('invalid set: $set');
       }
     }
     final key = dayKey(day);
     await _db.transaction((txn) async {
-      await txn.delete('sets',
-          where: 'exercise_id = ? AND day = ?', whereArgs: [exerciseId, key]);
+      await txn.delete(
+        'sets',
+        where: 'exercise_id = ? AND day = ?',
+        whereArgs: [exerciseId, key],
+      );
       final batch = txn.batch();
       for (var i = 0; i < sets.length; i++) {
         batch.insert('sets', {
@@ -128,33 +137,39 @@ class Repo {
 
   /// All sessions of an exercise, newest first.
   Future<List<Session>> sessions(int exerciseId) async {
-    final rows = await _db.query('sets',
-        columns: ['day', 'kg', 'reps'],
-        where: 'exercise_id = ?',
-        whereArgs: [exerciseId],
-        orderBy: 'day DESC, position');
+    final rows = await _db.query(
+      'sets',
+      columns: ['day', 'kg', 'reps'],
+      where: 'exercise_id = ?',
+      whereArgs: [exerciseId],
+      orderBy: 'day DESC, position',
+    );
     return _groupSessions(rows);
   }
 
   /// The sets of one exercise on one day, or null if nothing was logged.
   Future<Session?> session(int exerciseId, DateTime day) async {
-    final rows = await _db.query('sets',
-        columns: ['day', 'kg', 'reps'],
-        where: 'exercise_id = ? AND day = ?',
-        whereArgs: [exerciseId, dayKey(day)],
-        orderBy: 'position');
-    final s = _groupSessions(rows);
-    return s.isEmpty ? null : s.first;
+    final rows = await _db.query(
+      'sets',
+      columns: ['day', 'kg', 'reps'],
+      where: 'exercise_id = ? AND day = ?',
+      whereArgs: [exerciseId, dayKey(day)],
+      orderBy: 'position',
+    );
+    final grouped = _groupSessions(rows);
+    return grouped.isEmpty ? null : grouped.first;
   }
 
   /// The latest session of an exercise strictly before [day].
   Future<Session?> previousSession(int exerciseId, DateTime day) async {
-    final last = await _db.query('sets',
-        columns: ['day'],
-        where: 'exercise_id = ? AND day < ?',
-        whereArgs: [exerciseId, dayKey(day)],
-        orderBy: 'day DESC',
-        limit: 1);
+    final last = await _db.query(
+      'sets',
+      columns: ['day'],
+      where: 'exercise_id = ? AND day < ?',
+      whereArgs: [exerciseId, dayKey(day)],
+      orderBy: 'day DESC',
+      limit: 1,
+    );
     if (last.isEmpty) return null;
     return session(exerciseId, parseDayKey(last.first['day']! as String));
   }
@@ -164,21 +179,27 @@ class Repo {
   Future<List<ExerciseSummary>> summaries() async {
     final all = await exercises();
     final out = <ExerciseSummary>[];
-    for (final e in all) {
-      final s = await sessions(e.id);
-      out.add(ExerciseSummary(
-        exercise: e,
-        lastDay: s.isEmpty ? null : s.first.day,
-        lastTop: s.isEmpty ? null : topSet(s.first.sets),
-        monthChangeKg: changeOver(s),
-      ));
+    for (final exercise in all) {
+      final history = await sessions(exercise.id);
+      out.add(
+        ExerciseSummary(
+          exercise: exercise,
+          lastDay: history.isEmpty ? null : history.first.day,
+          lastTop: history.isEmpty ? null : topSet(history.first.sets),
+          monthChangeKg: changeOver(history),
+        ),
+      );
     }
     out.sort((a, b) {
-      final da = a.lastDay, db = b.lastDay;
-      if (da != null && db != null && da != db) return db.compareTo(da);
-      if (da == null && db != null) return 1;
-      if (da != null && db == null) return -1;
-      return a.exercise.name.toLowerCase().compareTo(b.exercise.name.toLowerCase());
+      final dayA = a.lastDay, dayB = b.lastDay;
+      if (dayA != null && dayB != null && dayA != dayB) {
+        return dayB.compareTo(dayA);
+      }
+      if (dayA == null && dayB != null) return 1;
+      if (dayA != null && dayB == null) return -1;
+      return a.exercise.name.toLowerCase().compareTo(
+        b.exercise.name.toLowerCase(),
+      );
     });
     return out;
   }
@@ -187,33 +208,41 @@ class Repo {
 
   /// The latest day with any set, or null when nothing is logged.
   Future<DateTime?> lastWorkoutDay() async {
-    final rows = await _db.rawQuery('SELECT MAX(day) AS d FROM sets');
-    final d = rows.first['d'] as String?;
-    return d == null ? null : parseDayKey(d);
+    final rows = await _db.rawQuery('SELECT MAX(day) AS last_day FROM sets');
+    final lastDay = rows.first['last_day'] as String?;
+    return lastDay == null ? null : parseDayKey(lastDay);
   }
 
   /// Every day with at least one set.
   Future<Set<DateTime>> trainedDays() async {
     final rows = await _db.rawQuery('SELECT DISTINCT day FROM sets');
-    return {for (final r in rows) parseDayKey(r['day']! as String)};
+    return {for (final row in rows) parseDayKey(row['day']! as String)};
   }
 
   /// Everything done on [day], exercises in the order they were first logged.
   Future<List<DayEntry>> dayLog(DateTime day) async {
-    final rows = await _db.rawQuery('''
-      SELECT e.id, e.name, s.kg, s.reps
-      FROM sets s JOIN exercises e ON e.id = s.exercise_id
-      WHERE s.day = ?
-      ORDER BY (SELECT MIN(id) FROM sets WHERE exercise_id = e.id AND day = s.day),
-               s.position''', [dayKey(day)]);
+    final rows = await _db.rawQuery(
+      '''
+      SELECT exercises.id, exercises.name, sets.kg, sets.reps
+      FROM sets JOIN exercises ON exercises.id = sets.exercise_id
+      WHERE sets.day = ?
+      ORDER BY (SELECT MIN(first.id) FROM sets AS first
+                WHERE first.exercise_id = exercises.id AND first.day = sets.day),
+               sets.position''',
+      [dayKey(day)],
+    );
     final out = <DayEntry>[];
-    for (final r in rows) {
-      final id = r['id']! as int;
+    for (final row in rows) {
+      final id = row['id']! as int;
       if (out.isEmpty || out.last.exercise.id != id) {
-        out.add(DayEntry(
-            exercise: Exercise(id: id, name: r['name']! as String), sets: []));
+        out.add(
+          DayEntry(
+            exercise: Exercise(id: id, name: row['name']! as String),
+            sets: [],
+          ),
+        );
       }
-      out.last.sets.add(_set(r));
+      out.last.sets.add(_set(row));
     }
     return out;
   }
@@ -221,16 +250,16 @@ class Repo {
   /// Every set ever logged, oldest first, for the CSV export.
   Future<List<SetRow>> allSets() async {
     final rows = await _db.rawQuery('''
-      SELECT s.day, e.name, s.position, s.kg, s.reps
-      FROM sets s JOIN exercises e ON e.id = s.exercise_id
-      ORDER BY s.day, e.name COLLATE NOCASE, s.position''');
+      SELECT sets.day, exercises.name, sets.position, sets.kg, sets.reps
+      FROM sets JOIN exercises ON exercises.id = sets.exercise_id
+      ORDER BY sets.day, exercises.name COLLATE NOCASE, sets.position''');
     return [
-      for (final r in rows)
+      for (final row in rows)
         SetRow(
-          day: parseDayKey(r['day']! as String),
-          exercise: r['name']! as String,
-          position: r['position']! as int,
-          set: _set(r),
+          day: parseDayKey(row['day']! as String),
+          exercise: row['name']! as String,
+          position: row['position']! as int,
+          set: _set(row),
         ),
     ];
   }
@@ -243,23 +272,23 @@ class Repo {
     return clean;
   }
 
-  static Exercise _exercise(Map<String, Object?> r) =>
-      Exercise(id: r['id']! as int, name: r['name']! as String);
+  static Exercise _exercise(Map<String, Object?> row) =>
+      Exercise(id: row['id']! as int, name: row['name']! as String);
 
-  static WorkSet _set(Map<String, Object?> r) =>
-      WorkSet(kg: (r['kg']! as num).toDouble(), reps: r['reps']! as int);
+  static WorkSet _set(Map<String, Object?> row) =>
+      WorkSet(kg: (row['kg']! as num).toDouble(), reps: row['reps']! as int);
 
   /// Groups rows already ordered by day then position into sessions.
   static List<Session> _groupSessions(List<Map<String, Object?>> rows) {
     final out = <Session>[];
     String? current;
-    for (final r in rows) {
-      final key = r['day']! as String;
+    for (final row in rows) {
+      final key = row['day']! as String;
       if (key != current) {
         out.add(Session(day: parseDayKey(key), sets: []));
         current = key;
       }
-      out.last.sets.add(_set(r));
+      out.last.sets.add(_set(row));
     }
     return out;
   }

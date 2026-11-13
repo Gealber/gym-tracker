@@ -3,11 +3,11 @@ import 'package:test/test.dart';
 
 void main() {
   test('November 2026 starts on Sunday: 6 blanks, then 30 days', () {
-    final g = monthGrid(2026, 11);
-    expect(g.take(6), everyElement(isNull));
-    expect(g[6], 1);
-    expect(g.last, 30);
-    expect(g.length, 36);
+    final grid = monthGrid(2026, 11);
+    expect(grid.take(6), everyElement(isNull));
+    expect(grid[6], 1);
+    expect(grid.last, 30);
+    expect(grid.length, 36);
   });
 
   test('a month starting on Monday has no blanks', () {

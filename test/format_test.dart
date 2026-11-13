@@ -50,7 +50,10 @@ void main() {
     // Spring forward in many zones happens between these dates (47 h apart).
     expect(daysAgo(DateTime(2026, 3, 28), DateTime(2026, 3, 30)), '2 days ago');
     // Fall back (49 h apart).
-    expect(daysAgo(DateTime(2026, 10, 24), DateTime(2026, 10, 26)), '2 days ago');
+    expect(
+      daysAgo(DateTime(2026, 10, 24), DateTime(2026, 10, 26)),
+      '2 days ago',
+    );
   });
 
   test('dayKey round trip', () {

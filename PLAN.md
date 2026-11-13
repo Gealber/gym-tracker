@@ -21,7 +21,9 @@ ads, notifications, i18n (UI is English).
 
 ## Stack
 
-- Flutter / Dart, Android only, package `app.gulolio.gym`, label "Gym".
+- Flutter / Dart (3.50+), Android only, package `app.gulolio.gym`, label "Gym".
+- Material widgets from the `material_ui` package (Flutter 3.50 deprecates
+  `package:flutter/material.dart` in its favour).
 - SQLite via `sqflite` (data lives on the phone).
 - `intl` for date formatting.
 - `share_plus` + `path_provider` for the CSV export.
@@ -164,7 +166,8 @@ versioned with `PRAGMA user_version` for later migrations; foreign keys on.
 ## Code layout
 
 ```
-lib/main.dart                 app, theme wiring
+lib/main.dart                 opens the DB, app, bottom bar
+lib/store.dart                Store (repo + change counter), reload-on-change mixin
 lib/theme.dart                palette tokens + ThemeData
 lib/models.dart               Exercise, WorkSet, Session, ExerciseSummary
 lib/stats.dart                topSet, chart points, month change (pure, tested)
@@ -190,12 +193,12 @@ test/calendar_math_test.dart
 1. Scaffold (done).
 2. stats.dart + tests (done).
 3. db.dart + tests (done).
-4. Theme + home screen.
-5. Log workout screen.
-6. Exercise screen + chart.
-7. Day view + "Last workout" header.
+4. Theme + home screen (done).
+5. Log workout screen (done).
+6. Exercise screen + chart (done).
+7. Day view + "Last workout" header (done).
 7b. Calendar tab (month grid logic tested: leap years, Monday start, month lengths).
-8. CSV export + test.
+8. CSV export + test (done).
 9. Analyze / tests clean -> run it on a phone and adjust the look.
 10. Screenshots of the real app (adb `exec-out screencap -p`) into `docs/screenshots/`
     and into the README.
@@ -215,4 +218,5 @@ test/calendar_math_test.dart
 - Android scaffold (package, label, black splash, default icon, release signed with
   the debug key), `pubspec.yaml`, `analysis_options.yaml`.
 - Data layer done: `db.dart` (SQLite repo), `stats.dart`, `format.dart`,
-  `calendar_math.dart`, `csv_export.dart`; 37 tests green. No UI yet.
+  `calendar_math.dart`, `csv_export.dart`; 37 tests green.
+- All screens written (steps 4-8); analyzer clean. Not yet run on a phone.

@@ -78,18 +78,23 @@ class SetRow {
   final WorkSet set;
 }
 
-/// The date part of [t] as a local midnight.
-DateTime dateOnly(DateTime t) => DateTime(t.year, t.month, t.day);
+/// The date part of [time] as a local midnight.
+DateTime dateOnly(DateTime time) => DateTime(time.year, time.month, time.day);
 
 /// 'YYYY-MM-DD', the form days are stored in.
 String dayKey(DateTime day) {
-  final m = day.month.toString().padLeft(2, '0');
-  final d = day.day.toString().padLeft(2, '0');
-  return '${day.year.toString().padLeft(4, '0')}-$m-$d';
+  final year = day.year.toString().padLeft(4, '0');
+  final month = day.month.toString().padLeft(2, '0');
+  final dayOfMonth = day.day.toString().padLeft(2, '0');
+  return '$year-$month-$dayOfMonth';
 }
 
 /// Inverse of [dayKey].
 DateTime parseDayKey(String key) {
   final parts = key.split('-');
-  return DateTime(int.parse(parts[0]), int.parse(parts[1]), int.parse(parts[2]));
+  return DateTime(
+    int.parse(parts[0]),
+    int.parse(parts[1]),
+    int.parse(parts[2]),
+  );
 }
